@@ -6,7 +6,10 @@
 #include<stdlib.h>
 #include<limits.h>
 #include<memory.h>
+#include <string.h>
 
+#define MAX_CHARS 50
+#define MAX_LOCAIS 2
 #define BRANCO 0
 #define CINZA  1
 #define PRETO  2
@@ -17,6 +20,7 @@
 typedef struct a{ /* Celula de uma lista de arestas */
 	int    extremo2;
 	struct a *prox;
+	char localidades[MAX_LOCAIS][MAX_CHARS];
 }Arest;
 
 typedef struct v{  /* Cada vertice tem um ponteiro para uma lista de arestas incidentes nele */
@@ -30,7 +34,7 @@ typedef struct v{  /* Cada vertice tem um ponteiro para uma lista de arestas inc
  */
 void criaGrafo(Vert **G, int ordem);
 void destroiGrafo(Vert **G, int ordem);
-int  acrescentaAresta(Vert G[], int ordem, int v1, int v2);
+int  acrescentaAresta(Vert G[], int ordem, int v1, int v2, char *local1, char *local2);
 void imprimeGrafo(Vert G[], int ordem);
 
  
@@ -73,7 +77,7 @@ void destroiGrafo(Vert **G, int ordem){
  * Como o grafo nao e orientado, para uma aresta com extremos i e j, quando
  *   i != j, serao criadas, na estrutura de dados, arestas (i,j) e (j,i) .
  */
-int acrescentaAresta(Vert G[], int ordem, int v1, int v2){
+int acrescentaAresta(Vert G[], int ordem, int v1, int v2, char *local1, char *local2){
     Arest * A1, *A2;
     
 	if (v1<0 || v1 >= ordem) /* Testo se vertices sao validos */
@@ -85,6 +89,8 @@ int acrescentaAresta(Vert G[], int ordem, int v1, int v2){
 	A1= (Arest *) malloc(sizeof(Arest));
 	A1->extremo2= v2;
 	A1->prox= G[v1].prim;
+	strcpy(A1->localidades[0], local1);
+	strcpy(A1->localidades[1], local2);
 	G[v1].prim= A1;
 
 	if (v1 == v2) return 1; /* Aresta e um laco */
@@ -110,10 +116,12 @@ void imprimeGrafo(Vert G[], int ordem){
 	printf("\nLista de Adjacencia:\n");
 
 	for (i=0; i<ordem; i++){
-		printf("\n    v%d: ", i);
+		printf("\n  v%d: ", i);
 		aux= G[i].prim;
 		for( ; aux != NULL; aux= aux->prox)
-			printf("  v%d", aux->extremo2);
+			printf("\n    v%d - (%s, %s)", aux->extremo2, aux->localidades[0], aux->localidades[1]);
+
+		
 	}
 	printf("\n\n");
 
@@ -128,17 +136,17 @@ int main(int argc, char *argv[]) {
 	int ordemG= 10; /* Vertices identificado de 0 ate 9 */
 		
 	criaGrafo(&G, ordemG);
-	acrescentaAresta(G,ordemG,0,1);
-	acrescentaAresta(G,ordemG,0,2);
-	acrescentaAresta(G,ordemG,0,7);
-	acrescentaAresta(G,ordemG,2,4);
-	acrescentaAresta(G,ordemG,2,5);
-	acrescentaAresta(G,ordemG,2,5);
-	acrescentaAresta(G,ordemG,3,5);
-	acrescentaAresta(G,ordemG,4,6);
-	acrescentaAresta(G,ordemG,3,6);
-	acrescentaAresta(G,ordemG,7,7);
-	acrescentaAresta(G,ordemG,8,9);
+	acrescentaAresta(G,ordemG,0,1, "A", "B");
+	acrescentaAresta(G,ordemG,0,2, "A", "C");
+	acrescentaAresta(G,ordemG,0,7, "A", "H");
+	acrescentaAresta(G,ordemG,2,4, "C", "E");
+	acrescentaAresta(G,ordemG,2,5, "C", "F");
+	acrescentaAresta(G,ordemG,2,5, "C", "F");
+	acrescentaAresta(G,ordemG,3,5, "D", "F");
+	acrescentaAresta(G,ordemG,4,6, "E", "G");
+	acrescentaAresta(G,ordemG,3,6, "D", "G");
+	acrescentaAresta(G,ordemG,7,7, "H", "H");
+	acrescentaAresta(G,ordemG,8,9, "I", "J");
 
 	imprimeGrafo(G, ordemG);
        
