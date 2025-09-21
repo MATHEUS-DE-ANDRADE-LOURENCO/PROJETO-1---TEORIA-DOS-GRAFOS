@@ -133,7 +133,7 @@ void imprimeGrafo(Vert G[], int ordem){
 int main(int argc, char *argv[]) {
     int i;
 	Vert *G;
-	int ordemG= 10; /* Vertices identificado de 0 ate 9 */
+	int ordemG= 50; /* Vertices identificado de 0 ate 9 */
 		
 	criaGrafo(&G, ordemG);
 	acrescentaAresta(G,ordemG,1,2, "", "");
