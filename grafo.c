@@ -138,9 +138,9 @@ int main(int argc, char *argv[]) {
 	criaGrafo(&G, ordemG);
 	acrescentaAresta(G,ordemG,1,2, "", "");
 	acrescentaAresta(G,ordemG,1,8, "", "");
-	acrescentaAresta(G,ordemG,2,3, "A", "C");
-	acrescentaAresta(G,ordemG,2,7, "A", "H");
-	acrescentaAresta(G,ordemG,3,6, "C", "E");
+	acrescentaAresta(G,ordemG,2,3, "", "");
+	acrescentaAresta(G,ordemG,2,7, "", "");
+	acrescentaAresta(G,ordemG,3,6, "", "");
 	acrescentaAresta(G,ordemG,3,4, "Oxxo", "");
 	acrescentaAresta(G,ordemG,4,5, "Bluefit Maria Antonia", "");
 	acrescentaAresta(G,ordemG,4,47, "Estação higienopolis Mackenzie", "");
