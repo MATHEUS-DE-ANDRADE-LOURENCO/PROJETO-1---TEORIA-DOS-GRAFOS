@@ -1,0 +1,99 @@
+# Projeto de Programação - Locais no Meu Bairro - PARTE 2
+### Teoria dos Grafos - 2025-2  
+**Prof. Roberto C. de Araujo**
+
+---
+
+## Objetivo
+
+Modelar as ruas de um pequeno bairro como um **grafo** e, aplicando algoritmos sobre ele, calcular **trajetos curtos** para visitar um conjunto de locais definidos.
+
+O grafo deve ser representado **por lista de adjacência**, utilizando **a estrutura base fornecida no arquivo `Grafo_2025-2.c`** (divulgado no Moodle).  
+Não é permitido usar outra estrutura de dados.
+
+Será possível incluir **novos atributos** nas `structs` (vértices e arestas) conforme necessário.
+
+---
+
+## PARTE 2 – Trajetos no Meu Bairro
+
+Usa-se o grafo obtido na Parte 1 (com distâncias) para calcular **passeios mais curtos** entre determinadas localidades.
+
+Ajustes permitidos no grafo:
+- Inclusão de novas localidades ou arestas;
+- Inclusão de distâncias;
+- Representação de posições de locais em arestas.
+
+O programa deve receber **um conjunto de locais** e calcular **o passeio mais curto (em metros)** que:
+- Comece e termine em `"minha casa"`;
+- Passe por **todos os locais** indicados.
+
+---
+
+## Conjunto de Locais
+
+- O conjunto é **fixo na função `main`**.  
+- Pode ser alterado apenas modificando essa declaração.  
+- A quantidade de locais é livre, desde que definida no conjunto.  
+- A **ordem de entrada** não afeta o resultado final.  
+- A estrutura de dados para representar o conjunto fica a critério do grupo.
+
+---
+
+## Execução do Programa
+
+Na inicialização, o programa deve:
+1. Exibir na tela a lista de locais do conjunto de entrada.
+2. Calcular o **passeio fechado mais curto** que:
+   - Inicia em “minha casa”;
+   - Passa por todos os locais indicados.
+
+O algoritmo utilizado para esse cálculo deve ser escolhido e **documentado**.  
+O resultado exibido deve incluir:
+- Sequência de locais a visitar (na ordem do passeio mais curto);
+- Distância entre locais consecutivos;
+- Sequência de vértices visitados;
+- Distância total percorrida.
+
+A exibição deve ser **clara e bem estruturada**, mostrando o problema e a solução de forma compreensível.
+
+---
+
+## Observações Importantes
+
+- Os trajetos são **a pé** → vias de mão única podem ser ignoradas.  
+- Todas as vias têm acesso liberado.
+- O grafo deve conter:
+  - **Mais de 30 e menos de 50 vértices**;
+  - **Cerca de 20 localidades**.
+- As distâncias podem ser **aproximadas** (em metros).
+- Cada localidade deve estar **posicionada em uma aresta** (exemplo: 70 m de x, 30 m de y em uma aresta de 100 m).
+- Usar como base o arquivo `Grafo_2025-2.c` (versão de agosto).
+
+---
+
+## Entrega
+
+### Grupo
+- Até **4 alunos** por grupo.
+- **Apenas um** deve publicar no Moodle.
+
+### Arquivos a entregar
+1. **Documento PDF** contendo:
+   - Identificação completa do grupo;
+   - Imagem do bairro (Google Maps) com locais anotados;
+   - Imagem do grafo modelado com anotações;
+   - Texto descritivo do mapa, grafo e sua implementação;
+   - Documentação da estratégia e implementação da solução.
+
+2. **Programa em C** (`.c`, padrão ANSI C):
+   - Todo o código em um único arquivo;
+   - Cabeçalho com identificação dos membros;
+   - Comentários úteis e informativos.
+
+### Outras informações
+- O programa será testado no **DEV para Windows**.  
+- **Prazo de entrega:** até **18h do dia 25 de novembro**.
+
+---
+
