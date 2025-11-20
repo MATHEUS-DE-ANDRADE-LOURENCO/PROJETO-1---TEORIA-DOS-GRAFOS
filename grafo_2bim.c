@@ -10,8 +10,8 @@
 #include <string.h>
 
 #define MAX_CHARS 50
-#define MAX_LOCAIS 2
 #define MAX_VERTICES 50
+#define DIST_PADRAO 5 /*apenas para testes, apagar depois*/
 
 /* Cores (úteis para travessias, se necessário) */
 #define BRANCO 0
@@ -19,19 +19,19 @@
 #define PRETO  2
 
 /* Estrutura que representa uma localidade posicionada em uma aresta.
-   distancia_v1 e distancia_v2 guardam a distância da localidade quando
+   distancia_v e distancia_v guardam a distância da localidade quando
    a aresta é observada a partir de v1 ou v2 respectivamente. */
 typedef struct {
 	char nome[MAX_CHARS];
-	int distancia_v1;
-	int distancia_v2;
-} Localidade;
+	int distancia_v;
+}Localidade;
 
 /* Célula da lista de adjacência (aresta) */
 typedef struct Aresta{
 	int extremo2;
 	struct Aresta *prox;
-	Localidade localidades[MAX_LOCAIS];
+	int dist_prox; /* distância para o próximo vértice */
+	Localidade localidade;
 } Aresta;
 
 /* Vértice */
@@ -44,9 +44,8 @@ typedef struct Vertice{
 /* Protótipos */
 void criaGrafo(Vert **G, int ordem);
 void destroiGrafo(Vert **G, int ordem);
-int  acrescentaAresta(Vert G[], int ordem, int v1, int v2,
-					  char *local1, int distancia_1_v1, int distancia_1_v2,
-					  char *local2, int distancia_2_v1, int distancia_2_v2);
+int  acrescentaAresta(Vert G[], int ordem, int v1, int v2, int dist_prox,
+					 char *localidade, int distancia_v1, int distancia_v2);
 void imprimeGrafo(Vert G[], int ordem);
 void constroiGrafo(Vert **G, int *ordem);
 
@@ -85,34 +84,31 @@ void destroiGrafo(Vert **G, int ordem){
 /* Acrescenta aresta não orientada; armazena até 2 localidades por aresta
    com as distâncias relativas informadas para cada lado (v1 e v2).
    Retorna 1 em sucesso, 0 caso vértices inválidos ou falha de alocação. */
-int acrescentaAresta(Vert G[], int ordem, int v1, int v2,
-					 char *local1, int distancia_1_v1, int distancia_1_v2,
-					 char *local2, int distancia_2_v1, int distancia_2_v2){
+int acrescentaAresta(Vert G[], int ordem, int v1, int v2, int dist_prox,
+					 char *localidade, int distancia_v1, int distancia_v2){
 	Aresta *A1, *A2;
-	Localidade loc1, loc2;
+	Localidade loc, loc_v2;
 
 	if (v1 < 0 || v1 >= ordem) return 0;
 	if (v2 < 0 || v2 >= ordem) return 0;
 
 	/* prepara localidades */
-	if (local1 != NULL && local1[0] != '\0'){
-		strncpy(loc1.nome, local1, MAX_CHARS-1);
-		loc1.nome[MAX_CHARS-1] = '\0';
-		loc1.distancia_v1 = distancia_1_v1;
-		loc1.distancia_v2 = distancia_1_v2;
-	} else {
-		loc1.nome[0] = '\0';
-		loc1.distancia_v1 = loc1.distancia_v2 = 0;
-	}
 
-	if (local2 != NULL && local2[0] != '\0'){
-		strncpy(loc2.nome, local2, MAX_CHARS-1);
-		loc2.nome[MAX_CHARS-1] = '\0';
-		loc2.distancia_v1 = distancia_2_v1;
-		loc2.distancia_v2 = distancia_2_v2;
-	} else {
-		loc2.nome[0] = '\0';
-		loc2.distancia_v1 = loc2.distancia_v2 = 0;
+	/*Se nome da localidade nao for nulo (ou seja, se existe localidade)*/
+	if (localidade != NULL && localidade[0] != '\0'){ /*atribuicao da localidade a aresta*/
+		strncpy(loc.nome, localidade, MAX_CHARS-1);
+		loc.nome[MAX_CHARS-1] = '\0';
+		loc.distancia_v = distancia_v1;
+
+		strncpy(loc_v2.nome, localidade,  MAX_CHARS-1);
+		loc_v2.nome[MAX_CHARS-1] = '\0';
+		loc_v2.distancia_v = distancia_v2;
+	} else { /*sem localidade: manter nulo*/
+		loc.nome[0] = '\0';
+		loc.distancia_v = 0;
+
+		loc_v2.nome[0] = '\0';
+		loc_v2.distancia_v = 0;
 	}
 
 	/* cria aresta na lista de v1 */
@@ -120,22 +116,19 @@ int acrescentaAresta(Vert G[], int ordem, int v1, int v2,
 	if (A1 == NULL) return 0;
 	A1->extremo2 = v2;
 	A1->prox = G[v1].prim;
-	A1->localidades[0] = loc1;
-	A1->localidades[1] = loc2;
+	A1->dist_prox = dist_prox;
+	A1->localidade = loc;
 	G[v1].prim = A1;
 
-	if (v1 == v2) return 1; /* laço */
+	if (v1 == v2) return 1; /* se for um laço */
 
 	/* cria aresta simétrica na lista de v2 */
 	A2 = (Aresta*) malloc(sizeof(Aresta));
 	if (A2 == NULL) return 0;
 	A2->extremo2 = v1;
 	A2->prox = G[v2].prim;
-	/* para o lado de v2, trocamos as distâncias: quando a localidade foi
-	   fornecida para local1, as distâncias vistas a partir de v2 são as
-	   que foram passadas em distancia_1_v2 (parâmetro) */
-	A2->localidades[0] = loc1;
-	A2->localidades[1] = loc2;
+	A2->dist_prox = dist_prox;
+	A2->localidade = loc_v2;
 	G[v2].prim = A2;
 
 	return 1;
@@ -149,22 +142,16 @@ void imprimeGrafo(Vert G[], int ordem){
 	printf("\nOrdem: %d\n", ordem);
 	printf("Lista de Adjacencia:\n");
 
+	/*itera sobre os vertices do grafo*/
 	for(i = 0; i < ordem; i++){
-		printf("\n v%d:\n", i);
+		printf("\n v%d:\n", G[i].id);
 		aux = G[i].prim;
-		for(; aux != NULL; aux = aux->prox){
-			printf("   -> v%d", aux->extremo2);
-			if (aux->localidades[0].nome[0] != '\0'){
-				printf("    [Local1: %s, dist_v1=%dm, dist_v2=%dm]",
-					   aux->localidades[0].nome,
-					   aux->localidades[0].distancia_v1,
-					   aux->localidades[0].distancia_v2);
-			}
-			if (aux->localidades[1].nome[0] != '\0'){
-				printf("    [Local2: %s, dist_v1=%dm, dist_v2=%dm]",
-					   aux->localidades[1].nome,
-					   aux->localidades[1].distancia_v1,
-					   aux->localidades[1].distancia_v2);
+		for(; aux != NULL; aux = aux->prox){ /*itera sobre as arestas do vertice*/
+			printf("   -> v%d: dist=%d", aux->extremo2, aux->dist_prox);
+			if (aux->localidade.nome[0] != '\0'){
+				printf("\n     [Local: %s, dist_v=%dm]",
+					   aux->localidade.nome,
+					   aux->localidade.distancia_v);
 			}
 			printf("\n");
 		}
@@ -179,94 +166,100 @@ void constroiGrafo(Vert **G, int *ordem){
 	*ordem = ordemG;
 
 	/* chamadas para adicionar arestas (distâncias padrões = 0) */
-	acrescentaAresta(*G, ordemG,1,2, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,1,8, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,2,3, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,2,7, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,3,6, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,3,4, "Oxxo", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,4,5, "Bluefit Maria Antonia", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,4,47, "Estação higienopolis Mackenzie", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,5,6, "SESC Consolação", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,5,11, "Farmácia", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,6,11, "Pão de açúcar", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,6,7, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,7,8, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,7,10, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,8,9, "Santa Casa", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,9,10, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,9,12, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,10,23, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,10,11, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,11,22, "Palacete", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,11,24, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,12,13, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,12,15, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,12,23, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,13,14, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,14,17, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,14,15, "Mambo", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,15,21, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,16,19, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,16,20, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,16,21, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,17,19, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,18,19, "Shopping Pátio Higienópolis", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,18,45, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,19,34, "Posto de Gasolina", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,20,25, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,20,33, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,20,34, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,21,22, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,22,23, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,22,25, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,24,25, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,24,27, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,25,26, "Padaria", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,26,27, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,26,29, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,26,33, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,27,47, "Universidade Persbiteriana Mackenzie", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,27,28, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,28,29, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,28,0, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,29,31, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,29,32, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,30,31, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,30,0, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,31,39, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,32,33, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,32,36, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,32,39, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,33,35, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,34,35, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,34,45, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,35,36, "Parque buenos aires", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,35,44, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,36,37, "Pão de açucar 2", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,36,43, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,37,38, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,37,39, "Pizza", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,37,42, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,38,40, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,38,41, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,38,49, "Hospital Infantil Sabará", 0,0, "Petz", 0,0);
-	acrescentaAresta(*G, ordemG,39,40, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,41,42, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,41,48, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,42,43, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,43,44, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,44,45, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,46,47, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,46,0, "", 0,0, "", 0,0);
-	acrescentaAresta(*G, ordemG,48,49, "", 0,0, "", 0,0);
-
+	acrescentaAresta(*G, ordemG, 1, 2, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG, 1,8, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,2,3, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,2,7, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,3,6, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,3,4, DIST_PADRAO, "Oxxo", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,4,5, DIST_PADRAO, "Bluefit Maria Antonia", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,4,47, DIST_PADRAO, "Estação higienopolis Mackenzie", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,5,6, DIST_PADRAO, "SESC Consolação", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,5,11, DIST_PADRAO, "Farmácia", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,6,11, DIST_PADRAO, "Pão de açúcar", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,6,7, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,7,8, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,7,10, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,8,9, DIST_PADRAO, "Santa Casa", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,9,10, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,9,12, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,10,23, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,10,11, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,11,22, DIST_PADRAO, "Palacete", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,11,24, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,12,13, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,12,15, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,12,23, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,13,14, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,14,17, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,14,15, DIST_PADRAO, "Mambo", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,15,21, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,16,19, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,16,20, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,16,21, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,17,19, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,18,19, DIST_PADRAO, "Shopping Pátio Higienópolis", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,18,45, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,19,34, DIST_PADRAO, "Posto de Gasolina", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,20,25, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,20,33, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,20,34, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,21,22, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,22,23, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,22,25, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,24,25, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,24,27, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,25,26, DIST_PADRAO, "Padaria", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,26,27, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,26,29, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,26,33, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,27,47, DIST_PADRAO, "Universidade Persbiteriana Mackenzie", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,27,28, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,28,29, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,28,0, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,29,31, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,29,32, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,30,31, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,30,0, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,31,39, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,32,33, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,32,36, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,32,39, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,33,35, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,34,35, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,34,45, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,35,36, DIST_PADRAO, "Parque buenos aires", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,35,44, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,36,37, DIST_PADRAO, "Pão de açucar 2", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,36,43, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,37,38, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,37,39, DIST_PADRAO, "Pizza", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,37,42, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,38,40, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,38,41, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,38,49, DIST_PADRAO, "Hospital Infantil Sabará", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,39,40, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,41,42, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,41,48, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,42,43, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,43,44, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,44,45, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,46,47, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,46,0, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
+	acrescentaAresta(*G, ordemG,48,49, DIST_PADRAO, "", DIST_PADRAO, DIST_PADRAO);
 }
 
+/*TODO: PIETRO*/
 int dijkstra(Vert *G, Localidade loc_origem, int origem, int destino, int dist[], int pred[]){
     // Implementação do algoritmo de Dijkstra
     // Esta função deve ser implementada conforme os requisitos do projeto
     return 0; // Retornar o custo mínimo do caminho encontrado, caso não encontre caminho, retorna -1
+}
+
+/*TODO: PIETRO*/
+void imprimeCaminho(int origem, int destino, int pred[]){
+	// Implementação para imprimir o caminho mínimo encontrado
+	// Esta função deve ser implementada conforme os requisitos do projeto
 }
 
 /*Função main*/
