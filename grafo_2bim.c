@@ -1,9 +1,21 @@
-/*
- * grafo_2bim.c
- * Versão ajustada para a Parte 2 do projeto: separa construção do grafo em
- * função constroiGrafo e mantém localidades posicionadas em arestas.
- * ANSI C, comentários em português.
+/* grafo_2bim.c
+ * 
+ * Implementacao da parte 2 do projeto de Teoria dos Grafos, incluindo:
+ * 
+ * - Ajustes na modelagem do grafo
+ * - Mapeamento de distâncias entre vertices e localidades
+ * - Implementacao de algoritmo para rota mais curta dado um conjunto de localidades
+ * - Estruturacao conforme padrao ANSI-C
+ * - Comentarios em PTBR
+ * 
+ * Grupo:
+ * 
+ * - Alexandre Ribeiro de Souza - 10417845
+ * - Matheus de Andrade Lourenco - 10419691
+ * - Murillo Cardoso Ferreira- 10418082
+ * - Pietro Zanaga Neto - 10418574
  */
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,27 +36,27 @@ enum letras {
 
 /* Estrutura que representa uma localidade posicionada em uma aresta.
    distancia_v e distancia_v guardam a distância da localidade quando
-   a aresta é observada a partir de v1 ou v2 respectivamente. */
+   a aresta e observada a partir de v1 ou v2 respectivamente. */
 typedef struct {
 	char nome[MAX_CHARS];
 	int distancia_v;
 }Localidade;
 
-/* Célula da lista de adjacência (aresta) */
+/* Celula da lista de adjacencia (aresta) */
 typedef struct Aresta{
 	int extremo2;
 	struct Aresta *prox;
-	int dist_prox; /* distância para o próximo vértice */
+	int dist_prox; /* distância para o próximo vertice */
 	Localidade localidade;
 } Aresta;
 
-/* Vértice */
+/* Vertice */
 typedef struct Vertice{
 	int id;
 	int cor;
 	Aresta *prim;
 	int pai; /*Id do vertice pai no algoritmo de Dikstra*/
-	int dist; /*Distancia do vertice até o vertice inicial no algoritmo de Dikstra*/
+	int dist; /*Distancia do vertice ate o vertice inicial no algoritmo de Dikstra*/
 } Vert;
 
 /* Protótipos */
@@ -54,7 +66,7 @@ int  acrescentaAresta(Vert G[], int ordem, int v1, int v2, int dist_prox, char *
 void imprimeGrafo(Vert G[], int ordem);
 void constroiGrafo(Vert **G, int *ordem);
 
-/* Cria vetor de vértices e inicializa listas de adjacência */
+/* Cria vetor de vertices e inicializa listas de adjacencia */
 void criaGrafo(Vert **G, int ordem){
 	int i;
 	*G = (Vert*) malloc(sizeof(Vert) * ordem);
@@ -62,7 +74,7 @@ void criaGrafo(Vert **G, int ordem){
 		fprintf(stderr, "Erro de alocacao\n");
 		exit(EXIT_FAILURE);
 	}
-	for(i = 0; i < ordem; i++){
+	for(i = 0; i < ordem; i++){ /*inicializacao do vertice*/
 		(*G)[i].id = i;
 		(*G)[i].cor = BRANCO;
 		(*G)[i].prim = NULL;
@@ -76,7 +88,7 @@ void destroiGrafo(Vert **G, int ordem){
 	int i;
 	Aresta *a, *n;
 	if (*G == NULL) return;
-	for(i = 0; i < ordem; i++){
+	for(i = 0; i < ordem; i++){ /*destroi vertices*/
 		a = (*G)[i].prim;
 		while(a != NULL){
 			n = a->prox;
@@ -88,9 +100,9 @@ void destroiGrafo(Vert **G, int ordem){
 	*G = NULL;
 }
 
-/* Acrescenta aresta não orientada; armazena até 2 localidades por aresta
+/* Acrescenta aresta não orientada; armazena ate 2 localidades por aresta
    com as distâncias relativas informadas para cada lado (v1 e v2).
-   Retorna 1 em sucesso, 0 caso vértices inválidos ou falha de alocação. */
+   Retorna 1 em sucesso, 0 caso vertices inválidos ou falha de alocação. */
 int acrescentaAresta(Vert G[], int ordem, int v1, int v2, int dist_prox,
 					 char *localidade, int distancia_v1, int distancia_v2){
 	Aresta *A1, *A2;
@@ -103,10 +115,12 @@ int acrescentaAresta(Vert G[], int ordem, int v1, int v2, int dist_prox,
 
 	/*Se nome da localidade nao for nulo (ou seja, se existe localidade)*/
 	if (localidade != NULL && localidade[0] != '\0'){ /*atribuicao da localidade a aresta*/
+		/*localidade para primeiro vertice da aresta*/
 		strncpy(loc.nome, localidade, MAX_CHARS-1);
 		loc.nome[MAX_CHARS-1] = '\0';
 		loc.distancia_v = distancia_v1;
 
+		/*localidade para outro extremo da aresta*/
 		strncpy(loc_v2.nome, localidade,  MAX_CHARS-1);
 		loc_v2.nome[MAX_CHARS-1] = '\0';
 		loc_v2.distancia_v = distancia_v2;
@@ -123,19 +137,19 @@ int acrescentaAresta(Vert G[], int ordem, int v1, int v2, int dist_prox,
 	if (A1 == NULL) return 0;
 	A1->extremo2 = v2;
 	A1->prox = G[v1].prim;
-	A1->dist_prox = dist_prox;
-	A1->localidade = loc;
+	A1->dist_prox = dist_prox; /*distancia para proximo vertice*/
+	A1->localidade = loc; /*localidade*/
 	G[v1].prim = A1;
 
 	if (v1 == v2) return 1; /* se for um laço */
 
-	/* cria aresta simétrica na lista de v2 */
+	/* cria aresta simetrica na lista de v2 */
 	A2 = (Aresta*) malloc(sizeof(Aresta));
 	if (A2 == NULL) return 0;
 	A2->extremo2 = v1;
 	A2->prox = G[v2].prim;
-	A2->dist_prox = dist_prox;
-	A2->localidade = loc_v2;
+	A2->dist_prox = dist_prox; /*distancia para proximo vertice*/
+	A2->localidade = loc_v2; /*localidade*/
 	G[v2].prim = A2;
 
 	return 1;
@@ -166,7 +180,7 @@ void imprimeGrafo(Vert G[], int ordem){
 	printf("\n");
 }
 
-/* Constroi o grafo: Contém a configuração das arestas conforme grafo obtido*/
+/* Constroi o grafo: Contem a configuração das arestas conforme grafo obtido*/
 void constroiGrafo(Vert **G, int *ordem){
 	int ordemG = 51;
 	criaGrafo(G, ordemG);
@@ -256,6 +270,7 @@ void constroiGrafo(Vert **G, int *ordem){
 	acrescentaAresta(*G, ordemG,48,49, 60, "", 0, 0);
 }
 
+/*obtem vertice de menor distancia*/
 int menorVertice(Vert G[], int ordem){
 
     int idMenor = -1;
@@ -271,9 +286,9 @@ int menorVertice(Vert G[], int ordem){
 }
 
 
-
+/*obtem caminho mais curto dados uma origem e um destino*/
 int dijkstra(Vert G[], int ordem, char *origem, char *destino){
-    //Inicialização do dijkstra
+    /*Inicialização do dijkstra*/
     for(int i = 0; i < ordem; i++){
 		G[i].pai = NULL;
 		G[i].cor = BRANCO;
@@ -291,13 +306,13 @@ int dijkstra(Vert G[], int ordem, char *origem, char *destino){
     int distanciaDestino2;
     Aresta *aux;
 
-    //Encontrar o id do vertice a partir do nome da localidade de origem
-    //Os dois extremos da aresta da localidade são armazenados pois ainda não é possivel saber
-    //a partir de qual vertice a rota sera feita
+    /*Encontrar o id do vertice a partir do nome da localidade de origem*/
+    /*Os dois extremos da aresta da localidade são armazenados pois ainda não e possivel saber*/
+    /*a partir de qual vertice a rota sera feita*/
     for(int i = 1; i < ordem; i++){
 		aux = G[i].prim;
 		for(; aux != NULL; aux = aux->prox){
-			if (strcmp(aux->localidade.nome, origem)==0){
+			if (strcmp(aux->localidade.nome, origem)==0){ 
 		        verticeOrigem2 = i;
                 verticeOrigem1 = aux->extremo2;
                 distanciaOrigem1 =  aux->localidade.distancia_v;
@@ -306,7 +321,7 @@ int dijkstra(Vert G[], int ordem, char *origem, char *destino){
 			}
 		}
 	}
-	//Encontrar o id do vertice a partir do nome da localidade de destino
+	/*Encontrar o id do vertice a partir do nome da localidade de destino*/
     for(int i = 1; i < ordem; i++){
 		aux = G[i].prim;
 		for(; aux != NULL; aux = aux->prox){
@@ -337,13 +352,13 @@ int dijkstra(Vert G[], int ordem, char *origem, char *destino){
         }
 			G[verticeAtual].cor = PRETO; /*Quando todos os vertices adjacentes são explorados, o vertice se torna preto */
 	}
-	//Adiciona a distancia do vertice até a localidade
+	/*Adiciona a distancia do vertice ate a localidade*/
     int distancia1 = G[verticeDestino1].dist+distanciaDestino1;
     int distancia2 = G[verticeDestino2].dist+distanciaDestino2;
 
-    //Escolhe qual o melhor vertice a ser utilizado como "vertice destino" pelo motivo da localidade estar na aresta
+    /*Escolhe qual o melhor vertice a ser utilizado como "vertice destino" pelo motivo da localidade estar na aresta*/
     if(distancia1<distancia2){
-        //A distancia1 é retornada como negativo para facil identificação do "vertice de destino"
+        /*A distancia1 e retornada como negativo para facil identificação do "vertice de destino"*/
         return -distancia1;
     }else{
         return distancia2;
@@ -374,7 +389,7 @@ void trocaValores(char *vetor, int primeiro, int segundo){
     vetor[segundo] = temp;
 }
 
-//Algoritmo com backtracking para definir todas as permutações de localidades possiveis
+/*Algoritmo com backtracking para definir todas as permutações de localidades possiveis*/
 void geraPermutacoes(char vetor[], int inicio, int fim, char rotas[][26], int *indice) {
     if(inicio == fim) {
         strcpy(rotas[*indice], vetor);
@@ -386,7 +401,8 @@ void geraPermutacoes(char vetor[], int inicio, int fim, char rotas[][26], int *i
         char temp = vetor[inicio];
         vetor[inicio] = vetor[i];
         vetor[i] = temp;
-        geraPermutacoes(vetor, inicio + 1, fim, rotas, indice);
+		/*chamada recursiva para proxima posicao do vetor*/
+        geraPermutacoes(vetor, inicio + 1, fim, rotas, indice); 
         temp = vetor[inicio];
         vetor[inicio] = vetor[i];
         vetor[i] = temp;
@@ -408,14 +424,14 @@ void melhorRota(Vert G[], int ordem, char *lugares[], int nLugares){
     char rotas[possibilidades][26];
     int indice = 0;
 
-    //atribui a rota inicial = ordem das localidades fornecidas
+    /*atribui a rota inicial = ordem das localidades fornecidas*/
     for(int i = 0; i < nLugares; i++){
         rotaAtual[i] = 'A' + i;
     }
 
-    //gera as permutações de rotas e as armazena em rotas
+    /*gera as permutações de rotas e as armazena em rotas*/
     geraPermutacoes(rotaAtual, 0, nLugares - 1, rotas, &indice);
-    //Calcula as distancias entre todas as localidades e armazena em uma matriz de adjacencia
+    /*Calcula as distancias entre todas as localidades e armazena em uma matriz de adjacencia*/
     for(int i = 0; i < nLugares; i++){
         for(int j = 0; j < nLugares; j++){
             if(i == j){
@@ -429,22 +445,22 @@ void melhorRota(Vert G[], int ordem, char *lugares[], int nLugares){
             }
         }
     }
-    //Itera sobre todas as rotas, calculando a distancia total
+    /*Itera sobre todas as rotas, calculando a distancia total*/
     for(int r = 0; r < possibilidades; r++){
         int distancia = 0;
         int temp;
-        //calcula a distancia da casa ate a primeira localidade
+        /*calcula a distancia da casa ate a primeira localidade*/
         temp = dijkstra(G, ordem, "Minha Casa", lugares[rotas[r][0] - 'A']);
         if(temp<0){
             temp = -temp;
         }
 
         distancia += temp;
-        //Itera pela string da rota atual, somando os valores das distancias entre cada local
+        /*Itera pela string da rota atual, somando os valores das distancias entre cada local*/
         for(int j = 0; j < nLugares - 1; j++){
             distancia += distancias[rotas[r][j] - 'A'][rotas[r][j+1] - 'A'];
         }
-        //calcula a distancia da ultima localidade ate casa
+        /*calcula a distancia da ultima localidade ate casa*/
         temp = dijkstra(G, ordem, lugares[rotas[r][nLugares - 1] - 'A'], "Minha Casa");
 
         if(temp<0){
@@ -452,13 +468,14 @@ void melhorRota(Vert G[], int ordem, char *lugares[], int nLugares){
         }
 
         distancia += temp;
-        //Sempre armazena a melhor rota ate o momento
+        /*Sempre armazena a melhor rota ate o momento*/
         if(distancia < distanciaMin){
             distanciaMin = distancia;
             strcpy(melhorRota, rotas[r]);
         }
     }
 
+	/*Imprime caminho gerado pelo algoritmo*/
     printf("Ordem dos locais visitados\n");
     printf("Localidade : Casa\n");
     for(int i = 0;i<nLugares;i++){
@@ -470,7 +487,7 @@ void melhorRota(Vert G[], int ordem, char *lugares[], int nLugares){
     printf("\nRota completa:\n");
 
 
-    //casa ate 1 ponto
+    /*casa ate 1 ponto*/
     temp = dijkstra(G,ordem,lugares[melhorRota[0]-'A'],"Minha Casa");
     printf("Trajeto: Casa ate %s\n",lugares[melhorRota[0]-'A'] );
     Aresta *aux;
@@ -518,7 +535,7 @@ void melhorRota(Vert G[], int ordem, char *lugares[], int nLugares){
 
 
 
-    //ultimo ponto ate casa
+    /*ultimo ponto ate casa*/
 
     temp = dijkstra(G, ordem,"Minha Casa",lugares[melhorRota[nLugares-1]-'A']);
     printf("Trajeto: %s ate Minha casa\n",lugares[melhorRota[nLugares-1]-'A']);
@@ -550,11 +567,11 @@ int main(){
 	int ordem = 51;
 	constroiGrafo(&G, &ordem);
 
-	//vetor de localidades utilizadas no algoritmo. Altere as localidades para obter outras rotas
+	/*vetor de localidades utilizadas no algoritmo. Altere as localidades para obter outras rotas*/
 	char *locais[] = {"Pizza","Mambo","Shopping Patio Higienopolis"};
 	int n = sizeof(locais) / sizeof(locais[0]);
 	melhorRota(G, ordem, locais, n);
-	//imprimeGrafo(G,ordem);
+	/*imprimeGrafo(G,ordem);*/
 	destroiGrafo(&G, ordem);
 	return 0;
 }
